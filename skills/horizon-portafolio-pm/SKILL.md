@@ -65,7 +65,7 @@ v1.8.1 (30/10): en buscar, "WiFi" sin generación descarta las ONT sin WiFi (ej.
 - Líneas que vende Horizon: FiberHome (+Ousent), Huawei (OLT, placas, energía y switches; **Horizon ya no vende ONT/ONU Huawei**: ofrecer la equivalente FH) y ZTT (cable). Discontinuados (I-con, ZTE, Netconn, Intelbras, China Mobile, Zikun, Wolk, HFC): ofrecer reemplazo.
 
 ## Formato de respuesta a un pedido
-**En el chat: SIEMPRE tarjetas visuales** (show_widget, módulo interactive) con el HTML de `config/plantillaPedido` del PM, reemplazando los `{{CAMPOS}}` con la salida del motor y sin cambiar estilos: veredicto, 2 tarjetas (Recomendada / Supera, Más barata o A pedido) con stock, IVA, total y Cotizar; Antes de cotizar; Mensaje con Copiar; Recomendación PM. Después, una o dos líneas (fuente de precios y stock, qué falta). Nicolás 30/10: «nunca lo pierdas». El formato de texto de abajo es el de las secciones y el del motor:
+**En el chat: SIEMPRE tarjetas visuales** (show_widget, módulo interactive; **donde no hay show_widget, como en Claude Code**: el mismo HTML se renderiza a PNG con Playwright/Chromium a 2× y se manda la imagen; si tampoco se puede renderizar, va el formato de texto de abajo y se dice en una línea por qué) con el HTML de `config/plantillaPedido` del PM, reemplazando los `{{CAMPOS}}` con la salida del motor y sin cambiar estilos: veredicto, 2 tarjetas (Recomendada / Supera, Más barata o A pedido) con stock, IVA, total y Cotizar; Antes de cotizar; Mensaje con Copiar; Recomendación PM. Después, una o dos líneas (fuente de precios y stock, qué falta). Nicolás 30/10: «nunca lo pierdas». El formato de texto de abajo es el de las secciones y el del motor:
 ```
 ## Cotización — <equipo + placas>
 
