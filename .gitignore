@@ -1,0 +1,8 @@
+# nunca datos en este repositorio
+salida/
+.motores/
+*.csv
+*.xlsx
+*.xls
+datos/
+__pycache__/

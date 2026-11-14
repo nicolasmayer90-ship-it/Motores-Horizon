@@ -1,0 +1,93 @@
+{
+ "manifiesto": "2.10",
+ "sellado": "2026-11-14",
+ "regla": "Los motores se mudan, no se reescriben: cada archivo tiene que tener la misma huella (sha256, 12 caracteres) que el manifiesto sellado del datacenter. Un cambio de motor se hace de a uno, con comparación antes/después y el «hacelo» de Nicolás, y actualiza esta huella en el mismo commit.",
+ "motores": {
+  "motores/conciliador.py": {
+   "doc": "datacenter/conciliador",
+   "huella": "634d1e535ab4",
+   "version": "1.3",
+   "test": [
+    "test"
+   ]
+  },
+  "motores/sales_engine.py": {
+   "doc": "datacenter/sales_engine",
+   "huella": "d848a7ccae04",
+   "version": "4.7",
+   "test": [
+    "test"
+   ]
+  },
+  "motores/cinco_cosas.py": {
+   "doc": "datacenter/cinco_cosas",
+   "huella": "6085934d2f57",
+   "version": "2.0",
+   "test": [
+    "test"
+   ]
+  },
+  "motores/stockfish_auditor.py": {
+   "doc": "datacenter/stockfish_auditor",
+   "huella": "291fea244ec1",
+   "version": "2.6",
+   "test": [
+    "test"
+   ]
+  },
+  "motores/stockfish_controles.py": {
+   "doc": "datacenter/stockfish_controles",
+   "huella": "75a33bd66064",
+   "version": "1.3",
+   "test": [
+    "test"
+   ]
+  },
+  "motores/control_reportes.py": {
+   "doc": "datacenter/script_control_reportes",
+   "huella": "a7cf0a72ad84",
+   "version": "1.1",
+   "test": null
+  },
+  "motores/correr_dia.py": {
+   "doc": "datacenter/script_correr_dia",
+   "huella": "ce8de6b175c1",
+   "version": "1.7",
+   "test": [
+    "test"
+   ]
+  },
+  "motores/inicio_loki.py": {
+   "doc": "datacenter/script_inicio",
+   "huella": "3a338933c699",
+   "version": "1.11",
+   "test": [
+    "--test"
+   ]
+  },
+  "motores/banco_manos.py": {
+   "doc": "datacenter/banco_script",
+   "huella": "2bd0c2c87289",
+   "version": "1.1",
+   "test": [
+    "test"
+   ]
+  },
+  "motores/banco_montecarlo.py": {
+   "doc": "datacenter/banco_montecarlo",
+   "huella": "e829bac8e3cf",
+   "version": "1.0",
+   "test": [
+    "test"
+   ]
+  },
+  "motores/archivo/stockfish_v1.py": {
+   "doc": "datacenter/stockfish",
+   "huella": "591795389318",
+   "version": "1.0",
+   "test": [
+    "test"
+   ]
+  }
+ }
+}
