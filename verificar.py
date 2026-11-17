@@ -23,7 +23,9 @@ def main():
             print(f"FALLA · {ruta}: huella {h} y la sellada es {m['huella']} ({m['doc']} v{m['version']})"); ok = False; continue
         if not m.get("test"):
             print(f"PASA  · {ruta}: huella {h} (sin autotest)"); continue
-        r = subprocess.run([sys.executable, "-I", p] + m["test"], capture_output=True, text=True, cwd=os.path.dirname(p))
+        # -X utf8: en Windows la salida a un pipe es cp1252 y los autotests imprimen «→»; en Linux no cambia nada
+        r = subprocess.run([sys.executable, "-X", "utf8", "-I", p] + m["test"], capture_output=True, text=True,
+                           encoding="utf-8", cwd=os.path.dirname(p))
         fin = [l for l in (r.stdout + r.stderr).splitlines() if "RESULTADO" in l]
         bien = r.returncode == 0
         print(f"{'PASA ' if bien else 'FALLA'} · {ruta}: huella {h} · test {fin[-1].strip() if fin else 'código ' + str(r.returncode)}")
