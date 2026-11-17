@@ -69,6 +69,22 @@ como dato), el precio vigente sale de HIVE y lo ambiguo se pregunta, no se elige
 
 Si la base es de otro día, `apertura_loki` lo avisa en la primera línea.
 
+## Copia en Turso (dec. 140)
+
+La base también vive en Turso para que el Claude de la nube la lea en vivo. **La PC es la única
+que escribe**: después de cada carga se copia entera, en una sola transacción, y se controla
+tabla por tabla (filas y huella del contenido).
+
+4. Después de `cargar.py`:
+   `python -I C:\Horizon\Motores-Horizon\horizon_db\sincronizar_turso.py --url libsql://<base>.turso.io`
+   Tiene que terminar en `RESULTADO: PASA`. Si algo falla, Turso queda como estaba (ROLLBACK).
+   `--solo-comparar` controla sin copiar.
+
+El conector (`servidor.py`) sigue leyendo el archivo local: la PC abre igual de rápido y no
+depende de internet. El token de escritura va en la variable `TURSO_TOKEN` o en
+`%USERPROFILE%\.horizon\turso_db_token.txt`, **nunca en este repositorio**. El de solo lectura
+es para la nube y no se guarda en la PC.
+
 ## Lo que sigue
 
 - **Etapa 3:** la carga se hace sola desde HIVE, Finnegans y el CRM (sin fotos viejas).
