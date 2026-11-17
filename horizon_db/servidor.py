@@ -13,7 +13,7 @@ import argparse, json, os, sys, traceback
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import consultas as C  # noqa: E402
 
-VERSION = "1.0.0"
+VERSION = "1.1.0"
 PROTOCOLOS = ("2025-06-18", "2025-03-26", "2024-11-05")
 
 INSTRUCCIONES = (
@@ -30,7 +30,16 @@ HERRAMIENTAS = [
     ("ficha_cliente", "Todo de una cuenta: datos, OLT, próxima acción, decisión del Sales Engine, "
      "cotizaciones, últimas compras e historial. Acepta CUIT, id de ficha o parte del nombre.",
      {"consulta": TEXTO}, ["consulta"], lambda cx, a: C.ficha_cliente(cx, a["consulta"])),
-    ("seguimientos_hoy", "A quién llamar hoy: primero el orden del Sales Engine, después la agenda vencida "
+    ("estado_cliente", "Tarjeta «LOKI · INTELIGENCIA COMERCIAL» de una cuenta, armada en una consulta: ficha, "
+     "compras por comprobante (anuladas marcadas por Stockfish), último precio, grupo y sus cotizaciones abiertas, "
+     "Sales Engine, stock y alertas A1-A9. Usar para «estado / status / ficha de X». Antes, consultar HIVE "
+     "(precio_producto y consultar_stock del producto principal) y pasar precio_isp y stock_hive. Devuelve el "
+     "resumen y el HTML de la tarjeta para mostrar con show_widget.",
+     {"consulta": TEXTO, "precio_isp": {"type": "number"}, "stock_hive": {"type": "number"},
+      "fecha_hive": TEXTO}, ["consulta"],
+     lambda cx, a: C.estado_cliente(cx, a["consulta"], a.get("hoy"), a.get("precio_isp"),
+                                    a.get("stock_hive"), a.get("fecha_hive"))),
+    ("seguimientos_hoy","A quién llamar hoy: primero el orden del Sales Engine, después la agenda vencida "
      "o de hoy de las fichas (sin perdidas ni cuentas fuera).", {"hoy": TEXTO}, [],
      lambda cx, a: C.seguimientos_hoy(cx, a.get("hoy"))),
     ("buscar_producto", "Stock según la copia de HIVE (con la fecha de la foto) y el último precio cotizado "
@@ -52,7 +61,7 @@ def lista_herramientas():
     out = []
     for nombre, desc, props, req, _ in HERRAMIENTAS:
         props = dict(props)
-        if nombre in ("apertura_loki", "facturas_sin_cargar"):
+        if nombre in ("apertura_loki", "facturas_sin_cargar", "estado_cliente"):
             props["hoy"] = {"type": "string", "description": "AAAA-MM-DD; por defecto, hoy en Argentina"}
         out.append({"name": nombre, "description": desc,
                     "inputSchema": {"type": "object", "properties": props, "required": req},

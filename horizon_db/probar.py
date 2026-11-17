@@ -59,7 +59,17 @@ def armar_export(raiz):
         "hz_operacion": {"pago": "confirmado", "pagoAt": "2026-11-13T15:21:00Z", "despacho": "pendiente"}})
     escribir(f"{raiz}/stockfish_fichas/a-alfa.json", {"empresa": "Alfa Fibra", "etapa": "cotizado",
         "sf_compras": {"nFacturas": 1, "primera": "2026-10-20", "ultima": "2026-10-20", "usdBrutoNeto": 1900},
-        "sf_nHallazgos": {"alta": 1, "media": 0, "baja": 2}})
+        "sf_nHallazgos": {"alta": 1, "media": 0, "baja": 2},
+        "sf_comprobantes": [  # sabotaje A60: la FA 0007 está anulada por NC y no tiene que contar
+            {"fecha": "2026-03-01", "tipo": "F", "comp": "A-00005-00000007", "moneda": "USD", "bruto": 760, "total": 839.8, "anulada": True},
+            {"fecha": "2026-03-05", "tipo": "NC", "comp": "A-00005-00000008", "moneda": "USD", "bruto": -760, "total": -839.8},
+            {"fecha": "2026-10-20", "tipo": "F", "comp": "A-00005-00000001", "moneda": "USD", "bruto": 1900, "total": 2099}],
+        "sf_lineas": [
+            {"fecha": "2026-03-01", "tipo": "F", "comp": "A-00005-00000007", "items": ["20 × ONT Prueba X [FH]"]},
+            {"fecha": "2026-10-20", "tipo": "AJ", "comp": "A-00005-00000001",
+             "items": ["0 × Descuento Comercial (Iva 10,5%) [-]", "50 × ONT Prueba X [FH]"]}]})
+    escribir(f"{raiz}/datacenter/grupos.json", {"grupos": {"prueba": {
+        "nombre": "Grupo Prueba", "fichas": ["a-alfa", "g-gama"], "fuente": "probar.py"}}})
     escribir(f"{raiz}/reportes/r21.json", {
         "formato": {"f": ["fecha", "tipo", "cliente", "cuit", "cuitPorNombre", "comprobante", "producto", "detalle",
                           "cantidad", "pendiente", "vendedor", "marca", "familia", "subfamilia", "deposito", "_fila",
@@ -161,6 +171,26 @@ def main():
         cargar.armar(raiz, db)
         cx = C.abrir(db)
 
+        # v2.2: grupos y tarjeta de estado
+        chequear("v2.2: grupos cargados desde datacenter/grupos",
+                 sorted(tuple(r) for r in cx.execute("SELECT grupo, cliente_id FROM grupos")) ==
+                 [("prueba", "a-alfa"), ("prueba", "g-gama")])
+        t = C.estado_cliente(cx, "Alfa", HOY, precio_isp=40, stock_hive=480, fecha_hive=HOY)
+        tarjeta = t.split("<<<TARJETA")[1] if "<<<TARJETA" in t else ""
+        chequear("estado: devuelve la tarjeta LOKI sin campos sin llenar",
+                 "LOKI · INTELIGENCIA COMERCIAL" in tarjeta and "{{" not in tarjeta, t[:300])
+        chequear("estado: muestra el empuje del Sales Engine", "RENOVAR" in t, t[:300])
+        chequear("sabotaje A60: la factura anulada no suma y se nombra como anulada",
+                 "Anuladas con NC (no cuentan): FA 0007" in tarjeta and ">50 unidades" not in tarjeta
+                 and "50 <span" in tarjeta, tarjeta[-1500:])
+        chequear("estado: último precio por unidad sin el descuento (1900 / 50 = 38)", "USD 38 + IVA" in tarjeta, tarjeta)
+        chequear("estado: usa el precio y el stock de HIVE que se le pasan", "USD 40,00" in tarjeta and ">480<" in tarjeta)
+        t = C.estado_cliente(cx, "g-gama", HOY)
+        chequear("estado: avisa la cotización abierta de otra ficha del grupo (A8)",
+                 "A8 Alfa Fibra (mismo grupo) tiene la NM90 abierta" in t, t[:600])
+        chequear("estado: sin precio de HIVE lo pide", "falta el precio vigente" in t)
+        chequear("estado: ambiguo pide elegir", C.estado_cliente(cx, "Beta").startswith("Ambiguo"))
+
         t = C.apertura_loki(cx, HOY)
         chequear("apertura: empuje de hoy del Sales Engine", "empujes de hoy: 1" in t and "Alfa Fibra · RENOVAR" in t, t)
         chequear("apertura: trae el resumen de correr_dia", "RESUMEN de prueba" in t)
@@ -229,7 +259,7 @@ def main():
         chequear("MCP: initialize", resp.get(1, {}).get("result", {}).get("serverInfo", {}).get("name") == "horizon-db", r.stderr)
         chequear("MCP: la notificación no lleva respuesta", len(resp) == 4, str(list(resp)))
         nombres = [t["name"] for t in resp.get(2, {}).get("result", {}).get("tools", [])]
-        chequear("MCP: 7 herramientas de lectura", len(nombres) == 7 and "apertura_loki" in nombres, str(nombres))
+        chequear("MCP: 8 herramientas de lectura", len(nombres) == 8 and "estado_cliente" in nombres and "apertura_loki" in nombres, str(nombres))
         texto = resp.get(3, {}).get("result", {}).get("content", [{}])[0].get("text", "")
         chequear("MCP: ficha_cliente responde", texto.startswith("Alfa Fibra"), texto)
         chequear("MCP: falta un argumento → error claro", resp.get(4, {}).get("result", {}).get("isError") is True)

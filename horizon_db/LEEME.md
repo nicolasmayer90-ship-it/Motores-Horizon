@@ -13,6 +13,7 @@ y nunca se sube a GitHub.
 |---|---|
 | `esquema.sql` | Las tablas (v2.0): clientes (con la ficha entera en `doc`), historial, CUIT de cada ficha (principal y adicionales), contactos, cotizaciones (enteras en `doc`), ítems, operación de la cotización (pedido, pago, despacho, entrega), líneas de factura, libro de ventas (con tc, otros y usuario), remitos (reporte 21), Stockfish, stock, orden del Sales Engine, decisiones, aprendizajes y cuentas fuera |
 | `cargar.py` | Arma la base desde la exportación del CRM. La arma en un archivo aparte y reemplaza la anterior solo si todo salió bien |
+| `estado.py` + `tarjeta_cliente.html` | La tarjeta «LOKI · INTELIGENCIA COMERCIAL» de una cuenta en una consulta: compras por comprobante con las anuladas de Stockfish, último precio, grupo y sus cotizaciones abiertas, Sales Engine, stock y alertas A1-A9 |
 | `comparar.py` | Compara la base con la exportación del CRM: cada ficha, cotización y ficha de Stockfish campo por campo, y las filas de facturación, libro y remitos. `RESULTADO: PASA · 0 diferencias` o la lista de lo que no coincide |
 | `consultas.py` | Las consultas (lo que contesta cada herramienta) |
 | `servidor.py` | El conector MCP. Lo arranca Claude solo |
@@ -20,12 +21,13 @@ y nunca se sube a GitHub.
 
 Solo biblioteca estándar de Python: no se instala ningún paquete.
 
-## Las 7 herramientas
+## Las 8 herramientas
 
 | Herramienta | Qué te devuelve | Reemplaza a |
 |---|---|---|
 | `apertura_loki` | Estado de la base, empujes del Sales Engine, agenda de la semana, controles y el resumen del día | El arranque de Loki |
 | `ficha_cliente` | Todo de una cuenta (por CUIT, id o nombre) | Bajar fichas y buscar a mano |
+| `estado_cliente` | La tarjeta LOKI de una cuenta, lista para mostrar (pasarle precio_isp y stock_hive de HIVE) | Juntar ficha, Stockfish, motor, grupo y HIVE a mano |
 | `seguimientos_hoy` | Orden del Sales Engine y, después, la agenda vencida | Recorrer la ronda |
 | `buscar_producto` | Stock de la copia de HIVE (con la fecha de la foto) y el último precio cotizado | Consultar el PM |
 | `facturas_sin_cargar` | Facturas de Finnegans sin sus líneas en el CRM | El control que hoy hace Fundetec |

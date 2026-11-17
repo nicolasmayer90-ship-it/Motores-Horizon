@@ -77,6 +77,19 @@ def comparar(raiz, db):
         if sin_tc:
             dif.append(f"libro: {sin_tc} comprobantes sin tc (no se pueden pasar a USD)")
 
+        ruta = os.path.join(raiz, "datacenter", "grupos.json")
+        if os.path.exists(ruta):
+            g_crm = {(k, f) for k, g in (cargar.leer_json(ruta).get("grupos") or {}).items()
+                     for f in g.get("fichas") or []}
+            g_db = set(cx.execute("SELECT grupo, cliente_id FROM grupos").fetchall())
+            res.append(f"grupos: {len(g_crm)} fichas en grupos en el CRM · {len(g_db)} en la base")
+            for k in sorted(g_crm ^ g_db)[:MAX_DETALLE]:
+                dif.append(f"grupos: {k[0]}/{k[1]} no coincide entre el CRM y la base")
+            sin_ficha = cx.execute("SELECT grupo, cliente_id FROM grupos WHERE cliente_id NOT IN "
+                                   "(SELECT id FROM clientes)").fetchall()
+            for k in sin_ficha:
+                dif.append(f"grupos: {k[0]} nombra la ficha {k[1]}, que no existe")
+
         n_r21 = sum(1 for _ in cargar.filas_reporte(raiz, "r21"))
         n_rem = cx.execute("SELECT COUNT(*) FROM remitos").fetchone()[0]
         res.append(f"remitos (r21): {n_r21} filas en el CRM · {n_rem} en la base")

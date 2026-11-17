@@ -1,4 +1,5 @@
--- Horizon DB · esquema v2.1 (Etapa 1: solo lectura)
+-- Horizon DB · esquema v2.2 (Etapa 1: solo lectura)
+-- v2.2 (17/11): tabla grupos (datacenter/grupos) para la tarjeta de estado.
 -- v2.1 (17/11): los controles de duplicados miran solo fichas activas y usan todos los CUIT de la ficha;
 -- compradores sin ficha como vista.
 -- v2.0 (17/11): la base guarda la ficha y la cotización enteras (columna doc, JSON tal cual el CRM)
@@ -265,6 +266,16 @@ CREATE TABLE cuentas_fuera (
     empresa  TEXT,
     motivo   TEXT
 );
+
+-- v2.2: grupos económicos (datacenter/grupos del CRM): fichas que compran o deciden juntas
+CREATE TABLE grupos (
+    grupo       TEXT NOT NULL,
+    nombre      TEXT,
+    cliente_id  TEXT NOT NULL,
+    fuente      TEXT,
+    PRIMARY KEY (grupo, cliente_id)
+);
+CREATE INDEX grupos_cliente ON grupos(cliente_id);
 
 CREATE TABLE decisiones (
     n      INTEGER PRIMARY KEY,

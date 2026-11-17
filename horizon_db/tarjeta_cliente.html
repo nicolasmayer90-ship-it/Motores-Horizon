@@ -1,0 +1,44 @@
+<h2 class="sr-only">{{RESUMEN}}</h2>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+<style>
+.lk{font-family:Inter,sans-serif;font-size:13px;color:var(--text-primary);padding:.5rem 0}
+.mn{font-family:Manrope,sans-serif}
+.c{background:var(--surface-2);border:0.5px solid var(--border);border-radius:12px;padding:14px 16px}
+.pl{display:inline-block;font-size:11px;padding:3px 10px;border-radius:999px;font-weight:500}
+.rw{display:flex;justify-content:space-between;gap:12px;padding:5px 0;border-bottom:0.5px solid var(--border)}
+.mu{color:var(--text-secondary)}
+.ck{display:flex;gap:8px;padding:4px 0;line-height:1.5}
+</style>
+<div class="lk">
+<div class="mu" style="font-size:11px;letter-spacing:.08em">LOKI · INTELIGENCIA COMERCIAL · {{FECHA}}</div>
+<div class="mn" style="font-size:24px;font-weight:600;margin:6px 0 2px">{{RAZON_SOCIAL}}</div>
+<div class="mu">{{CABECERA}}</div>
+<div style="border:0.5px solid var(--border-warning);background:var(--bg-warning);border-radius:10px;padding:10px 14px;margin:14px 0;color:var(--text-warning)"><i class="ti ti-alert-triangle" aria-hidden="true"></i> {{BANDA}}</div>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px">
+<div class="c" style="border:1.5px solid var(--border-accent)">
+<span class="pl" style="background:var(--bg-accent);color:var(--text-accent)">Prioridad comercial</span>
+<div class="mn" style="font-size:16px;font-weight:600;margin:10px 0 2px">{{REQ_TITULO}}</div>
+<div class="mu">{{REQ_SUB}}</div>
+<div class="mn" style="font-size:30px;font-weight:600;margin:8px 0">{{REQ_CANT}} <span class="mu" style="font-size:13px;font-family:Inter">{{REQ_UNIDAD}}</span></div>
+{{REQ_FILAS}}
+<button onclick="sendPrompt('{{REQ_BOTON}}')">Evaluar cotización ↗</button>
+</div>
+<div class="c">
+<span class="pl" style="background:var(--bg-success);color:var(--text-success)">Facturación confirmada</span>
+<div class="mn" style="font-size:16px;font-weight:600;margin:10px 0 2px">Historial {{ANIO}}</div>
+<div class="mu">{{FACT_SUB}}</div>
+<div class="mn" style="font-size:30px;font-weight:600;margin:8px 0">{{FACT_CANT}} <span class="mu" style="font-size:13px;font-family:Inter">{{FACT_UNIDAD}}</span></div>
+{{FACT_FILAS}}
+<div class="rw" style="border:0"><span class="mu">Total {{ANIO}} con impuestos</span><span class="mn" style="font-weight:600">{{FACT_TOTAL}}</span></div>
+<button onclick="sendPrompt('{{FACT_BOTON}}')">Ver historial ↗</button>
+</div>
+</div>
+<div class="c" style="margin-top:12px">
+<div class="mu" style="margin-bottom:6px"><i class="ti ti-alert-circle" aria-hidden="true"></i> Antes de avanzar</div>
+<div style="line-height:1.6">{{ANTES}}</div>
+</div>
+<div class="c" style="margin-top:12px">
+<div class="mu" style="margin-bottom:6px"><i class="ti ti-list-check" aria-hidden="true"></i> Próxima acción sugerida</div>
+{{CHECKLIST}}
+</div>
+</div>

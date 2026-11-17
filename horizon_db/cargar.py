@@ -279,6 +279,15 @@ def cargar_datacenter(cx, raiz):
                        (clave, solo_digitos(v.get("cuit")), v.get("empresa"), v.get("motivo")))
             n += 1
         out["cuentas_fuera"] = n
+    ruta = os.path.join(dc, "grupos.json")
+    if os.path.exists(ruta):
+        n = 0
+        for clave, g in (leer_json(ruta).get("grupos") or {}).items():
+            for cid in g.get("fichas") or []:
+                cx.execute("INSERT OR REPLACE INTO grupos VALUES (?,?,?,?)",
+                           (clave, g.get("nombre"), cid, g.get("fuente")))
+                n += 1
+        out["grupos"] = n
     return out, corte
 
 

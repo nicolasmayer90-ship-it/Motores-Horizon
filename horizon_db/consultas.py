@@ -187,6 +187,13 @@ def ficha_cliente(cx, consulta):
     return "\n".join(s)
 
 
+def estado_cliente(cx, consulta, hoy=None, precio_isp=None, stock_hive=None, fecha_hive=None):
+    """Tarjeta LOKI de una cuenta (ver estado.py)."""
+    import estado
+    return estado.estado_cliente(cx, consulta, hoy or hoy_ar(), _buscar_clientes,
+                                 precio_isp, stock_hive, fecha_hive)
+
+
 def buscar_producto(cx, texto):
     q = (texto or "").strip()
     rs = cx.execute("SELECT * FROM stock WHERE codigo = ? OR nombre LIKE ? ORDER BY nombre LIMIT 15",
