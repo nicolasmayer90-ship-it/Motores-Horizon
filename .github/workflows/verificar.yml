@@ -9,3 +9,4 @@ jobs:
         with:
           python-version: "3.12"
       - run: python3 -I verificar.py
+      - run: python3 -I horizon_db/probar.py

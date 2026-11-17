@@ -1,0 +1,4 @@
+# Los motores se sellan por huella byte a byte: siempre LF, también en Windows (core.autocrlf)
+motores/** text eol=lf
+huellas.json text eol=lf
+verificar.py text eol=lf
