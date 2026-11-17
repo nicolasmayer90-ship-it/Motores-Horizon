@@ -6,3 +6,5 @@ salida/
 *.xls
 datos/
 __pycache__/
+*.db
+*.db.nueva

@@ -21,6 +21,10 @@ Un cambio de motor: de a uno, con comparación antes/después (y Fishtest si toc
 | `motores/banco_manos.py`, `motores/banco_montecarlo.py` | Banco de manos | se quedan hasta que Fishtest decida |
 | `motores/archivo/stockfish_v1.py` | Stockfish v1 | archivado: vuelve solo si gana en Fishtest |
 
+## Horizon DB
+
+`horizon_db/`: base SQLite y conector MCP de solo lectura para la PC de Nicolás (Etapa 1). No es un motor sellado: no entra en `huellas.json`; su autotest corre aparte en GitHub. Guía en `horizon_db/LEEME.md`.
+
 Pendientes de mudar (paso 3a del boceto): cotizador y Diseño V8 del PM, cada uno con su foto de oro antes.
 
 ## Foto de oro
