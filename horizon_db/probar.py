@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Horizon DB · autotest v1.0. Datos inventados (ninguna cuenta real), sanos y sabotajes.
+"""Horizon DB · autotest v2.0. Datos inventados (ninguna cuenta real), sanos y sabotajes.
 
     python -I probar.py   → RESULTADO: PASA | FALLA
 
@@ -35,7 +35,10 @@ def armar_export(raiz):
         "proximaFecha": "2026-11-16", "proximaAccion": "Renovar NM90", "marcaOlt": "FiberHome",
         "historial": [{"t": "2026-11-10T12:00:00Z", "txt": "pidió 100 ONT"}]})
     escribir(f"{raiz}/oportunidades/b-beta.json", {
-        "empresa": "Beta Net", "cuit": "30-22222222-2", "etapa": "perdido", "proximaFecha": "2026-11-01"})
+        "empresa": "Beta Net", "cuit": "30-22222222-2", "etapa": "perdido", "proximaFecha": "2026-11-01",
+        "pago": "cheques 0-120", "otroVendedor": "Mati", "archivada": True,
+        "cuitsAdicionales": [{"cuit": "30-44444444-4", "nombre": "Beta Sur"}],
+        "contactosAdicionales": [{"nombre": "Ana", "cargo": "compras", "celular": "11 5555", "fuente": "prueba"}]})
     escribir(f"{raiz}/oportunidades/b-beta-2.json", {  # sabotaje: mismo CUIT que Beta
         "empresa": "Beta Net SRL", "cuit": "30222222222", "etapa": "contactado"})
     escribir(f"{raiz}/oportunidades/g-gama.json", {"empresa": "Gama", "cuit": "", "etapa": "prospecto",
@@ -46,7 +49,19 @@ def armar_export(raiz):
     escribir(f"{raiz}/cotizaciones/2026-11-01-alfa-nm90.json", {
         "numero": "NM90", "oportunidadId": "a-alfa", "cuit": "30-11111111-1", "cliente": "Alfa Fibra",
         "fecha": "2026-11-01", "vence": "2026-11-10", "estado": "enviada", "neto": 3800, "total": 4199,
-        "items": [{"codigo": "9001", "articulo": "ONT Prueba X", "cantidad": 100, "precio": 38}]})
+        "items": [{"codigo": "9001", "articulo": "ONT Prueba X", "cantidad": 100, "precio": 38}],
+        "hz_operacion": {"pago": "confirmado", "pagoAt": "2026-11-13T15:21:00Z", "despacho": "pendiente"}})
+    escribir(f"{raiz}/stockfish_fichas/a-alfa.json", {"empresa": "Alfa Fibra", "etapa": "cotizado",
+        "sf_compras": {"nFacturas": 1, "primera": "2026-10-20", "ultima": "2026-10-20", "usdBrutoNeto": 1900},
+        "sf_nHallazgos": {"alta": 1, "media": 0, "baja": 2}})
+    escribir(f"{raiz}/reportes/r21.json", {
+        "formato": {"f": ["fecha", "tipo", "cliente", "cuit", "cuitPorNombre", "comprobante", "producto", "detalle",
+                          "cantidad", "pendiente", "vendedor", "marca", "familia", "subfamilia", "deposito", "_fila",
+                          "reglas"]},
+        "dic": {"tipo": ["Remito de Venta"], "cliente": ["ALFA FIBRA SA"], "producto": ["ONT Prueba X"],
+                "vendedor": ["Nicolás"], "marca": ["FH"], "familia": ["ONU"], "subfamilia": ["GPON"],
+                "deposito": ["Central"]},
+        "d": [["2026-10-21", 0, 0, "30111111111", 0, "R-0001-00000001", 0, None, 50, 0, 0, 0, 0, 0, 0, 1, None]]})
     escribir(f"{raiz}/facturacion/30111111111.json", {"cliente": "ALFA FIBRA SA", "cuit": "30111111111", "lineas": [
         {"comprobante": "A-00005-00000001", "fecha": "2026-10-20", "tipo": "F", "cod": "X",
          "producto": "ONT Prueba X", "cantidad": 50},
@@ -88,6 +103,43 @@ def main():
         conteos = cargar.armar(raiz, db)
         chequear("carga: 6 fichas, 1 cotización, 3 comprobantes", conteos["clientes"] == 6 and
                  conteos["cotizaciones"] == 1 and conteos["libro_ventas"] == 3, str(conteos))
+        cx = C.abrir(db)
+
+        # v2.0: lo que leen los motores y antes no entraba
+        q = lambda sql: [tuple(r) for r in cx.execute(sql).fetchall()]  # noqa: E731
+        chequear("v2: CUIT principal y adicional de la misma ficha",
+                 sorted(q("SELECT cuit, principal FROM cliente_cuits WHERE cliente_id='b-beta'")) ==
+                 [("30222222222", 1), ("30444444444", 0)], str(q("SELECT * FROM cliente_cuits")))
+        chequear("v2: contacto adicional", q("SELECT nombre, cargo FROM contactos") == [("Ana", "compras")])
+        chequear("v2: pago, otro vendedor y archivada en columnas",
+                 q("SELECT pago, otro_vendedor, archivada FROM clientes WHERE id='b-beta'") ==
+                 [("cheques 0-120", "Mati", "True")], str(q("SELECT pago, otro_vendedor, archivada FROM clientes WHERE id='b-beta'")))
+        chequear("v2: operación de la cotización (pago y despacho)",
+                 q("SELECT pago, pago_at, despacho FROM cotizacion_operacion") ==
+                 [("confirmado", "2026-11-13T15:21:00Z", "pendiente")])
+        chequear("v2: libro con tc y usuario", q("SELECT tc, usuario FROM libro_ventas WHERE comprobante='A-00005-00000001'") ==
+                 [(1.0, "x")])
+        chequear("v2: remito del reporte 21 con nombres traducidos",
+                 q("SELECT tipo, producto, cantidad, vendedor FROM remitos") == [("Remito de Venta", "ONT Prueba X", 50.0, "Nicolás")])
+        chequear("v2: Stockfish con resumen de compras y hallazgos",
+                 q("SELECT n_facturas, usd_bruto_neto, n_hallazgos FROM stockfish") == [(1, 1900.0, 3)])
+        chequear("v2: la ficha entera queda en doc", json.loads(q("SELECT doc FROM clientes WHERE id='b-beta'")[0][0])["pago"] == "cheques 0-120")
+
+        import comparar  # noqa: E402
+        res, dif = comparar.comparar(raiz, db)
+        chequear("comparar: base recién cargada = CRM (0 diferencias)", not dif, " | ".join(dif))
+        escribir(f"{raiz}/oportunidades/a-alfa.json", {**json.load(open(f"{raiz}/oportunidades/a-alfa.json", encoding="utf-8")),
+                                                       "proximaFecha": "2026-12-01"})
+        os.makedirs(f"{raiz}/cotizaciones", exist_ok=True)
+        escribir(f"{raiz}/cotizaciones/2026-11-20-nueva.json", {"numero": "NM91", "estado": "enviada"})
+        res, dif = comparar.comparar(raiz, db)
+        chequear("sabotaje: comparar ve el campo cambiado en la ficha",
+                 any("oportunidades/a-alfa: distinto en proximaFecha" in d for d in dif), " | ".join(dif))
+        chequear("sabotaje: comparar ve la cotización que falta en la base",
+                 any("cotizaciones/2026-11-20-nueva" in d and "falta en la base" in d for d in dif), " | ".join(dif))
+        os.remove(f"{raiz}/cotizaciones/2026-11-20-nueva.json")
+        cx.close()
+        cargar.armar(raiz, db)
         cx = C.abrir(db)
 
         t = C.apertura_loki(cx, HOY)

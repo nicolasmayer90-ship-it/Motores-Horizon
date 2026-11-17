@@ -11,8 +11,9 @@ y nunca se sube a GitHub.
 
 | Archivo | Qué hace |
 |---|---|
-| `esquema.sql` | Las tablas: clientes, historial, cotizaciones, líneas de factura, libro de ventas, stock, orden del Sales Engine, decisiones, aprendizajes y cuentas fuera |
+| `esquema.sql` | Las tablas (v2.0): clientes (con la ficha entera en `doc`), historial, CUIT de cada ficha (principal y adicionales), contactos, cotizaciones (enteras en `doc`), ítems, operación de la cotización (pedido, pago, despacho, entrega), líneas de factura, libro de ventas (con tc, otros y usuario), remitos (reporte 21), Stockfish, stock, orden del Sales Engine, decisiones, aprendizajes y cuentas fuera |
 | `cargar.py` | Arma la base desde la exportación del CRM. La arma en un archivo aparte y reemplaza la anterior solo si todo salió bien |
+| `comparar.py` | Compara la base con la exportación del CRM: cada ficha, cotización y ficha de Stockfish campo por campo, y las filas de facturación, libro y remitos. `RESULTADO: PASA · 0 diferencias` o la lista de lo que no coincide |
 | `consultas.py` | Las consultas (lo que contesta cada herramienta) |
 | `servidor.py` | El conector MCP. Lo arranca Claude solo |
 | `probar.py` | Autotest con datos inventados: `python -I probar.py` → `RESULTADO: PASA` |
@@ -65,7 +66,9 @@ como dato), el precio vigente sale de HIVE y lo ambiguo se pregunta, no se elige
 1. En Claude Code escribís «Loki»: baja el CRM a `C:\HorizonDB\crm` y corre `correr_dia.py`
    como hoy.
 2. Después: `python -I C:\Horizon\Motores-Horizon\horizon_db\cargar.py --raiz C:\HorizonDB\crm`
-3. Listo: `apertura_loki`, `ficha_cliente` y las demás contestan desde la base.
+3. Control: `python -I C:\Horizon\Motores-Horizon\horizon_db\comparar.py --raiz C:\HorizonDB\crm`
+   tiene que dar `PASA · 0 diferencias` antes de copiar a Turso.
+4. Listo: `apertura_loki`, `ficha_cliente` y las demás contestan desde la base.
 
 Si la base es de otro día, `apertura_loki` lo avisa en la primera línea.
 

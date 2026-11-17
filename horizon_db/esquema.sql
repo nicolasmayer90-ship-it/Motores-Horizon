@@ -1,4 +1,7 @@
--- Horizon DB · esquema v1.0 (Etapa 1: solo lectura)
+-- Horizon DB · esquema v2.0 (Etapa 1: solo lectura)
+-- v2.0 (17/11): la base guarda la ficha y la cotización enteras (columna doc, JSON tal cual el CRM)
+-- y suma lo que leen los motores: CUIT adicionales, contactos, operación de la cotización,
+-- remitos (reporte 21), tc/otros/usuario del libro y Stockfish. comparar.py controla doc por doc.
 -- La llave de todo es el CUIT normalizado (solo dígitos). Las fichas sin CUIT quedan con cuit NULL.
 -- En la Etapa 1 la base se arma entera en cada carga desde la exportación del CRM:
 -- no se edita a mano y no tiene herramientas que escriban.
@@ -37,7 +40,24 @@ CREATE TABLE clientes (
     monto            REAL,
     no_prospectar    TEXT,
     notas            TEXT,
-    actualizado      TEXT
+    actualizado      TEXT,
+    -- v2.0: lo que leen los motores y no estaba
+    creado           TEXT,
+    pago             TEXT,
+    tecnologia       TEXT,
+    abonados         TEXT,
+    facturacion_id   TEXT,
+    no_prospectar_motivo TEXT,
+    otro_vendedor    TEXT,
+    cuenta_compartida TEXT,
+    archivada        TEXT,
+    archivada_fecha  TEXT,
+    archivada_motivo TEXT,
+    unificada_en     TEXT,
+    motivo_perdida   TEXT,
+    fecha_ganado     TEXT,
+    fijado           TEXT,
+    doc              TEXT NOT NULL      -- la ficha entera, JSON tal cual el CRM
 );
 CREATE INDEX clientes_cuit ON clientes(cuit);
 CREATE INDEX clientes_fecha ON clientes(proxima_fecha);
@@ -48,6 +68,26 @@ CREATE TABLE historial (
     txt         TEXT
 );
 CREATE INDEX historial_cliente ON historial(cliente_id, t);
+
+-- Todos los CUIT de una ficha: el principal y los adicionales (cuitsAdicionales)
+CREATE TABLE cliente_cuits (
+    cliente_id  TEXT NOT NULL REFERENCES clientes(id),
+    cuit        TEXT NOT NULL,
+    nombre      TEXT,
+    cond_iva    TEXT,
+    principal   INTEGER NOT NULL      -- 1 = el CUIT de la ficha
+);
+CREATE INDEX cliente_cuits_cuit ON cliente_cuits(cuit);
+
+CREATE TABLE contactos (
+    cliente_id  TEXT NOT NULL REFERENCES clientes(id),
+    nombre      TEXT,
+    cargo       TEXT,
+    celular     TEXT,
+    mail        TEXT,
+    fuente      TEXT
+);
+CREATE INDEX contactos_cliente ON contactos(cliente_id);
 
 CREATE TABLE cotizaciones (
     id             TEXT PRIMARY KEY,
@@ -62,7 +102,17 @@ CREATE TABLE cotizaciones (
     neto           REAL,
     total          REAL,
     notas          TEXT,
-    actualizado    TEXT
+    actualizado    TEXT,
+    -- v2.0
+    marca          TEXT,
+    familia        TEXT,
+    cond_iva       TEXT,
+    tc             REAL,
+    iva_total      REAL,
+    fecha_ganada   TEXT,
+    archivada      TEXT,
+    reemplazada_por TEXT,
+    doc            TEXT NOT NULL      -- la cotización entera, JSON tal cual el CRM
 );
 CREATE INDEX cotizaciones_cliente ON cotizaciones(cliente_id);
 CREATE INDEX cotizaciones_cuit ON cotizaciones(cuit);
@@ -74,9 +124,26 @@ CREATE TABLE cotizacion_items (
     marca          TEXT,
     cantidad       REAL,
     precio         REAL,
-    iva            TEXT
+    iva            TEXT,
+    descripcion    TEXT,
+    neto           REAL
 );
 CREATE INDEX items_codigo ON cotizacion_items(codigo);
+
+-- Operación de la cotización (hz_operacion): pedido, pago, despacho, entrega, factura
+CREATE TABLE cotizacion_operacion (
+    cotizacion_id     TEXT PRIMARY KEY REFERENCES cotizaciones(id),
+    pedido_confirmado TEXT,
+    pago              TEXT,
+    pago_at           TEXT,
+    despacho          TEXT,
+    despacho_at       TEXT,
+    entrega           TEXT,
+    entrega_at        TEXT,
+    factura           TEXT,
+    cierre            TEXT,
+    doc               TEXT NOT NULL   -- hz_operacion entero
+);
 
 -- Líneas de factura por producto (colección facturacion del CRM)
 CREATE TABLE factura_lineas (
@@ -90,7 +157,9 @@ CREATE TABLE factura_lineas (
     marca        TEXT,
     familia      TEXT,
     cantidad     REAL,
-    vendedor     TEXT
+    vendedor     TEXT,
+    subfamilia   TEXT,
+    pendiente    REAL
 );
 CREATE INDEX lineas_cuit ON factura_lineas(cuit, fecha);
 CREATE INDEX lineas_comp ON factura_lineas(comprobante);
@@ -106,9 +175,51 @@ CREATE TABLE libro_ventas (
     bruto        REAL,
     total        REAL,
     reporte      TEXT,
+    -- v2.0: sin tc no se pasa a USD una factura en pesos
+    otros        REAL,
+    tc           REAL,
+    detalle      TEXT,
+    fecha_alta   TEXT,
+    usuario      TEXT,            -- quien la dio de alta en Finnegans, no el vendedor
+    cuit_por_nombre INTEGER,      -- 1 = el CUIT se asignó por nombre exacto
     PRIMARY KEY (tipocomp, comprobante)
 );
 CREATE INDEX libro_cuit ON libro_ventas(cuit, fecha);
+
+-- Remitos y devoluciones de venta (reporte 21): los despachos reales, sin importes
+CREATE TABLE remitos (
+    fecha        TEXT,
+    tipo         TEXT,            -- Remito de Venta o Devolución de Venta
+    cliente      TEXT,
+    cuit         TEXT,
+    cuit_por_nombre INTEGER,
+    comprobante  TEXT,
+    producto     TEXT,
+    detalle      TEXT,
+    cantidad     REAL,
+    pendiente    REAL,
+    vendedor     TEXT,
+    marca        TEXT,
+    familia      TEXT,
+    subfamilia   TEXT,
+    deposito     TEXT,
+    fila         INTEGER,
+    reglas       TEXT
+);
+CREATE INDEX remitos_cuit ON remitos(cuit, fecha);
+CREATE INDEX remitos_comp ON remitos(comprobante);
+
+-- Stockfish (historial auditado por cuenta; nunca manda sobre el CRM vivo)
+CREATE TABLE stockfish (
+    id            TEXT PRIMARY KEY,
+    empresa       TEXT,
+    n_facturas    INTEGER,
+    primera       TEXT,
+    ultima        TEXT,
+    usd_bruto_neto REAL,
+    n_hallazgos   INTEGER,
+    doc           TEXT NOT NULL    -- la ficha de Stockfish entera
+);
 
 CREATE TABLE stock (
     codigo      TEXT PRIMARY KEY,
