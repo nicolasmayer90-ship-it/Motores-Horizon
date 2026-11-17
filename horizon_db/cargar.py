@@ -113,7 +113,11 @@ def cargar_libro(cx, raiz):
                            (de("tipocomp"), r["comprobante"], r.get("fecha"), solo_digitos(r.get("cuit")),
                             de("cliente"), de("moneda"), num(r.get("bruto")), num(r.get("total")), base))
                 n += 1
-    return {"libro_ventas": n}
+    # libro_ventas = filas que quedaron en la tabla (antes se informaban las leídas y el número confundía:
+    # 3.263 leídas contra 2.992 guardadas el 17/11). Las reemplazadas son comprobantes repetidos, casi
+    # siempre el mismo en r15 y r22, donde manda el r22.
+    guardadas = cx.execute("SELECT COUNT(*) FROM libro_ventas").fetchone()[0]
+    return {"libro_ventas": guardadas, "libro_ventas_leidas": n, "libro_ventas_reemplazadas": n - guardadas}
 
 
 def cargar_datacenter(cx, raiz):
@@ -219,6 +223,12 @@ def main():
     conteos = armar(a.raiz, a.db)
     print(f"Base armada: {a.db}")
     for k, v in conteos.items():
+        if k in ("libro_ventas_leidas", "libro_ventas_reemplazadas"):
+            continue
+        if k == "libro_ventas":
+            print(f"  libro_ventas: {v} (leídas {conteos['libro_ventas_leidas']}, "
+                  f"{conteos['libro_ventas_reemplazadas']} reemplazadas: mismo comprobante en r15 y r22, manda el r22)")
+            continue
         print(f"  {k}: {v}")
     print("RESULTADO: PASA")
 
