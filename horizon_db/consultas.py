@@ -94,8 +94,10 @@ def apertura_loki(cx, hoy=None):
     sin = facturas_sin_lineas_filas(cx, dias=45, hoy=hoy)
     dup = cx.execute("SELECT COUNT(*) FROM v_duplicados_cuit").fetchone()[0]
     dupn = cx.execute("SELECT COUNT(*) FROM v_duplicados_nombre").fetchone()[0]
+    sinf = cx.execute("SELECT COUNT(*) FROM v_compradores_sin_ficha").fetchone()[0]
     partes.append(f"\nControles: {len(sin)} facturas de los últimos 45 días sin líneas cargadas · "
-                  f"{dup} CUIT con más de una ficha · {dupn} nombres repetidos sin CUIT")
+                  f"{dup} CUIT con más de una ficha activa · {dupn} nombres repetidos sin CUIT · "
+                  f"{sinf} CUIT que compraron sin ficha")
     r = cx.execute("SELECT texto FROM resumen WHERE clave = 'resumen.txt'").fetchone()
     if r:
         partes.append("\n--- Resumen de correr_dia ---\n" + r["texto"].strip())
@@ -226,7 +228,7 @@ def facturas_sin_cargar(cx, dias=60, hoy=None):
 def duplicados_cuit(cx):
     rs = cx.execute("SELECT * FROM v_duplicados_cuit ORDER BY fichas DESC, cuit").fetchall()
     rn = cx.execute("SELECT * FROM v_duplicados_nombre ORDER BY fichas DESC, nombre").fetchall()
-    s = [f"{len(rs)} CUIT con más de una ficha (unificar solo con «hacelo»):"]
+    s = [f"{len(rs)} CUIT con más de una ficha activa (unificar solo con «hacelo»; las ya unificadas no cuentan):"]
     s += [f"- {r['cuit']} · {r['fichas']} fichas: {r['cuales']}" for r in rs] or ["- ninguno"]
     s.append(f"{len(rn)} nombres repetidos en fichas sin CUIT (falta el CUIT para confirmar si son la misma):")
     s += [f"- «{r['nombre']}» · {r['fichas']} fichas: {r['cuales']}" for r in rn] or ["- ninguno"]

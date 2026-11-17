@@ -1,4 +1,6 @@
--- Horizon DB · esquema v2.0 (Etapa 1: solo lectura)
+-- Horizon DB · esquema v2.1 (Etapa 1: solo lectura)
+-- v2.1 (17/11): los controles de duplicados miran solo fichas activas y usan todos los CUIT de la ficha;
+-- compradores sin ficha como vista.
 -- v2.0 (17/11): la base guarda la ficha y la cotización enteras (columna doc, JSON tal cual el CRM)
 -- y suma lo que leen los motores: CUIT adicionales, contactos, operación de la cotización,
 -- remitos (reporte 21), tc/otros/usuario del libro y Stockfish. comparar.py controla doc por doc.
@@ -175,9 +177,10 @@ CREATE TABLE libro_ventas (
     bruto        REAL,
     total        REAL,
     reporte      TEXT,
-    -- v2.0: sin tc no se pasa a USD una factura en pesos
+    -- v2.0
     otros        REAL,
-    tc           REAL,
+    tc           REAL,            -- pesos por dólar en las filas en USD; las filas en pesos traen 1
+                                  -- (casi todas ND/NC por diferencia de cambio, que no son venta)
     detalle      TEXT,
     fecha_alta   TEXT,
     usuario      TEXT,            -- quien la dio de alta en Finnegans, no el vendedor
@@ -277,16 +280,43 @@ CREATE TABLE aprendizajes (
 );
 
 -- Controles que antes se hacían a mano
-CREATE VIEW v_duplicados_cuit AS
-    SELECT cuit, COUNT(*) AS fichas, GROUP_CONCAT(id || ' (' || empresa || ')', ' · ') AS cuales
-    FROM clientes WHERE cuit IS NOT NULL AND cuit <> ''
-    GROUP BY cuit HAVING COUNT(*) > 1;
+-- v2.1: una ficha unificada en otra (unificada_en) o archivada ya está resuelta: no cuenta como duplicado.
+CREATE VIEW v_fichas_activas AS
+    SELECT * FROM clientes
+    WHERE unificada_en IS NULL AND (archivada IS NULL OR archivada NOT IN ('True', 'true', '1'));
 
--- Mismo nombre y sin CUIT: el CUIT no los puede atajar (ej. dos «Berisys»)
+-- Mismo CUIT (principal o adicional) en dos fichas activas
+CREATE VIEW v_duplicados_cuit AS
+    SELECT cc.cuit, COUNT(DISTINCT a.id) AS fichas,
+           GROUP_CONCAT(DISTINCT a.id || ' (' || a.empresa || ')') AS cuales
+    FROM cliente_cuits cc JOIN v_fichas_activas a ON a.id = cc.cliente_id
+    GROUP BY cc.cuit HAVING COUNT(DISTINCT a.id) > 1;
+
+-- Mismo nombre y sin CUIT, entre fichas activas: el CUIT no los puede atajar (ej. dos «Berisys»)
 CREATE VIEW v_duplicados_nombre AS
     SELECT LOWER(TRIM(empresa)) AS nombre, COUNT(*) AS fichas, GROUP_CONCAT(id, ' · ') AS cuales
-    FROM clientes WHERE cuit IS NULL
+    FROM v_fichas_activas WHERE cuit IS NULL
     GROUP BY LOWER(TRIM(empresa)) HAVING COUNT(*) > 1;
+
+-- Lo ya resuelto (para mostrarlo, no para contarlo como problema)
+CREATE VIEW v_unificadas AS
+    SELECT id, empresa, cuit, unificada_en FROM clientes WHERE unificada_en IS NOT NULL;
+
+-- CUIT que compraron (facturas del libro) y no tienen ficha ni están en cuentas fuera.
+-- usd_facturado = solo facturas en USD (las filas en pesos traen tc 1: no se convierten acá).
+-- vendedor = el que más aparece en sus remitos (reporte 21), dato para decidir si es de otro vendedor.
+CREATE VIEW v_compradores_sin_ficha AS
+    SELECT l.cuit, MAX(l.cliente) AS cliente, COUNT(*) AS facturas,
+           ROUND(SUM(CASE WHEN l.moneda = 'USD' THEN l.bruto ELSE 0 END)) AS usd_facturado,
+           SUM(l.moneda <> 'USD') AS facturas_en_pesos,
+           MIN(l.fecha) AS primera, MAX(l.fecha) AS ultima,
+           (SELECT r.vendedor FROM remitos r WHERE r.cuit = l.cuit AND r.vendedor IS NOT NULL
+            GROUP BY r.vendedor ORDER BY COUNT(*) DESC LIMIT 1) AS vendedor
+    FROM libro_ventas l
+    WHERE l.cuit IS NOT NULL AND l.tipocomp LIKE '%Factura%'
+      AND l.cuit NOT IN (SELECT cuit FROM cliente_cuits)
+      AND l.cuit NOT IN (SELECT cuit FROM cuentas_fuera WHERE cuit IS NOT NULL)
+    GROUP BY l.cuit;
 
 CREATE VIEW v_facturas_sin_lineas AS
     SELECT l.* FROM libro_ventas l

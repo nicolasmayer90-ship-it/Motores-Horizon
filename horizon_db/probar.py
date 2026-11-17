@@ -36,11 +36,17 @@ def armar_export(raiz):
         "historial": [{"t": "2026-11-10T12:00:00Z", "txt": "pidió 100 ONT"}]})
     escribir(f"{raiz}/oportunidades/b-beta.json", {
         "empresa": "Beta Net", "cuit": "30-22222222-2", "etapa": "perdido", "proximaFecha": "2026-11-01",
-        "pago": "cheques 0-120", "otroVendedor": "Mati", "archivada": True,
+        "pago": "cheques 0-120", "otroVendedor": "Mati",
         "cuitsAdicionales": [{"cuit": "30-44444444-4", "nombre": "Beta Sur"}],
         "contactosAdicionales": [{"nombre": "Ana", "cargo": "compras", "celular": "11 5555", "fuente": "prueba"}]})
     escribir(f"{raiz}/oportunidades/b-beta-2.json", {  # sabotaje: mismo CUIT que Beta
         "empresa": "Beta Net SRL", "cuit": "30222222222", "etapa": "contactado"})
+    escribir(f"{raiz}/oportunidades/b-beta-vieja.json", {  # ya unificada en Beta: no es un duplicado abierto
+        "empresa": "Beta vieja", "cuit": "30222222222", "etapa": "contactado", "archivada": True,
+        "unificadaEn": "b-beta"})
+    escribir(f"{raiz}/oportunidades/d-delta.json", {  # sabotaje: CUIT adicional que es el principal de otra ficha
+        "empresa": "Delta", "cuit": "30-55555555-5", "etapa": "contactado",
+        "cuitsAdicionales": [{"cuit": "30444444444"}]})
     escribir(f"{raiz}/oportunidades/g-gama.json", {"empresa": "Gama", "cuit": "", "etapa": "prospecto",
                                                    "proximaFecha": "2026-11-15", "proximaAccion": "llamar"})
     escribir(f"{raiz}/oportunidades/g-gama-2.json", {"empresa": "Gama ", "etapa": "prospecto"})
@@ -80,7 +86,9 @@ def armar_export(raiz):
         ["2026-10-20", 0, 0, 0, "30111111111", 1, "A-00005-00000001", 1900, 199, 2099, 1, None, "", 0, 1]]})
     escribir(f"{raiz}/reportes/r15_2.json", {"formato": fmt, "d": [  # sabotaje: factura sin líneas
         ["2026-10-25", 0, 0, 0, "30111111111", 1, "A-00005-00000002", 500, 52, 552, 1, None, "", 0, 2],
-        ["2026-10-26", 1, 0, 0, "30111111111", 1, "A-00005-00000003", -500, -52, -552, 1, None, "", 0, 3]]})
+        ["2026-10-26", 1, 0, 0, "30111111111", 1, "A-00005-00000003", -500, -52, -552, 1, None, "", 0, 3],
+        ["2026-09-01", 0, 0, 0, "30999999999", 0, "A-00005-00000009", 700, 70, 770, 1, None, "", 0, 4],  # sin ficha
+        ["2026-09-02", 0, 0, 0, "30333333333", 0, "A-00005-00000010", 100, 10, 110, 1, None, "", 0, 5]]})  # cuenta fuera
     escribir(f"{raiz}/datacenter/hive_stock.json", {"corte": "2026-11-06", "productos": {
         "9001": {"nombre": "ONT Prueba X", "marca": "FH", "stock": 500, "transito": 0}}})
     escribir(f"{raiz}/datacenter/decisiones.json", {"lineas": ["1. 01/11 · Nicolás · Alfa se cotiza en USD"]})
@@ -101,8 +109,8 @@ def main():
         raiz, db = os.path.join(tmp, "crm"), os.path.join(tmp, "horizon.db")
         armar_export(raiz)
         conteos = cargar.armar(raiz, db)
-        chequear("carga: 6 fichas, 1 cotización, 3 comprobantes", conteos["clientes"] == 6 and
-                 conteos["cotizaciones"] == 1 and conteos["libro_ventas"] == 3, str(conteos))
+        chequear("carga: 8 fichas, 1 cotización, 5 comprobantes", conteos["clientes"] == 8 and
+                 conteos["cotizaciones"] == 1 and conteos["libro_ventas"] == 5, str(conteos))
         cx = C.abrir(db)
 
         # v2.0: lo que leen los motores y antes no entraba
@@ -111,9 +119,20 @@ def main():
                  sorted(q("SELECT cuit, principal FROM cliente_cuits WHERE cliente_id='b-beta'")) ==
                  [("30222222222", 1), ("30444444444", 0)], str(q("SELECT * FROM cliente_cuits")))
         chequear("v2: contacto adicional", q("SELECT nombre, cargo FROM contactos") == [("Ana", "compras")])
-        chequear("v2: pago, otro vendedor y archivada en columnas",
-                 q("SELECT pago, otro_vendedor, archivada FROM clientes WHERE id='b-beta'") ==
-                 [("cheques 0-120", "Mati", "True")], str(q("SELECT pago, otro_vendedor, archivada FROM clientes WHERE id='b-beta'")))
+        chequear("v2: pago y otro vendedor en columnas",
+                 q("SELECT pago, otro_vendedor FROM clientes WHERE id='b-beta'") == [("cheques 0-120", "Mati")])
+        chequear("v2: archivada y unificada en columnas",
+                 q("SELECT archivada, unificada_en FROM clientes WHERE id='b-beta-vieja'") == [("True", "b-beta")])
+        # v2.1: integridad
+        chequear("v2.1: la ficha unificada no cuenta como duplicado",
+                 q("SELECT fichas FROM v_duplicados_cuit WHERE cuit='30222222222'") == [(2,)],
+                 str(q("SELECT * FROM v_duplicados_cuit")))
+        chequear("v2.1: sabotaje: CUIT adicional repetido en dos fichas detectado",
+                 q("SELECT fichas FROM v_duplicados_cuit WHERE cuit='30444444444'") == [(2,)],
+                 str(q("SELECT * FROM v_duplicados_cuit")))
+        chequear("v2.1: comprador sin ficha detectado y cuenta con ficha no",
+                 q("SELECT cuit, facturas, usd_facturado FROM v_compradores_sin_ficha") == [("30999999999", 1, 700.0)],
+                 str(q("SELECT * FROM v_compradores_sin_ficha")))
         chequear("v2: operación de la cotización (pago y despacho)",
                  q("SELECT pago, pago_at, despacho FROM cotizacion_operacion") ==
                  [("confirmado", "2026-11-13T15:21:00Z", "pendiente")])
@@ -145,8 +164,8 @@ def main():
         t = C.apertura_loki(cx, HOY)
         chequear("apertura: empuje de hoy del Sales Engine", "empujes de hoy: 1" in t and "Alfa Fibra · RENOVAR" in t, t)
         chequear("apertura: trae el resumen de correr_dia", "RESUMEN de prueba" in t)
-        chequear("apertura: controles cuentan 1 factura y 1 CUIT repetido",
-                 "1 facturas" in t and "1 CUIT" in t and "1 nombres repetidos" in t, t)
+        chequear("apertura: controles cuentan 1 factura, 2 CUIT repetidos y 1 comprador sin ficha",
+                 "1 facturas" in t and "2 CUIT" in t and "1 nombres repetidos" in t and "1 CUIT que compraron sin ficha" in t, t)
 
         t = C.seguimientos_hoy(cx, HOY)
         chequear("agenda: entra Gama (vencida)", "Gama (g-gama)" in t, t)
@@ -195,7 +214,7 @@ def main():
             cx = C.abrir(db)
             n = cx.execute("SELECT COUNT(*) FROM clientes").fetchone()[0]
             cx.close()
-            chequear("sabotaje: carga rota no pisa la base buena", n == 6, f"quedaron {n}")
+            chequear("sabotaje: carga rota no pisa la base buena", n == 8, f"quedaron {n}")
 
         msgs = [{"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {"protocolVersion": "2025-06-18"}},
                 {"jsonrpc": "2.0", "method": "notifications/initialized"},
