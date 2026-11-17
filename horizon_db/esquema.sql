@@ -180,4 +180,6 @@ CREATE VIEW v_duplicados_nombre AS
 CREATE VIEW v_facturas_sin_lineas AS
     SELECT l.* FROM libro_ventas l
     WHERE l.tipocomp LIKE '%Factura%'
-      AND NOT EXISTS (SELECT 1 FROM factura_lineas f WHERE f.comprobante = l.comprobante);
+      -- el número se repite entre series (una NC y una factura vieja pueden tener el mismo): se cruza también por CUIT y tipo
+      AND NOT EXISTS (SELECT 1 FROM factura_lineas f WHERE f.comprobante = l.comprobante
+                      AND f.cuit = l.cuit AND f.tipo = 'F');

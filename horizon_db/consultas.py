@@ -167,12 +167,13 @@ def ficha_cliente(cx, consulta):
         s += [f"- {k['numero'] or k['id']} · {k['fecha']} · {k['estado']} · {usd(k['total'])} · vence {k['vence'] or 'sin vence'}"
               for k in cots]
     if c["cuit"]:
-        comp = cx.execute("SELECT comprobante, fecha, GROUP_CONCAT(CAST(CAST(cantidad AS INT) AS TEXT) || ' × ' || producto, ' + ') AS q "
-                          "FROM factura_lineas WHERE cuit = ? GROUP BY comprobante, fecha ORDER BY fecha DESC LIMIT 5",
+        comp = cx.execute("SELECT comprobante, fecha, tipo, GROUP_CONCAT(CAST(CAST(ABS(cantidad) AS INT) AS TEXT) || ' × ' || producto, ' + ') AS q "
+                          "FROM factura_lineas WHERE cuit = ? GROUP BY comprobante, fecha, tipo ORDER BY fecha DESC LIMIT 6",
                           (c["cuit"],)).fetchall()
         if comp:
-            s.append("Últimas compras (líneas de factura):")
-            s += [f"- {k['fecha']} · {k['comprobante']} · {k['q']}" for k in comp]
+            s.append("Últimos comprobantes (líneas de factura):")
+            nombre = {"F": "factura", "NC": "NOTA DE CRÉDITO (resta)", "ND": "nota de débito", "AJ": "ajuste"}
+            s += [f"- {k['fecha']} · {nombre.get(k['tipo'], k['tipo'] or '?')} {k['comprobante']} · {k['q']}" for k in comp]
         lib = cx.execute("SELECT COUNT(*) n, MAX(fecha) ult FROM libro_ventas WHERE cuit = ? AND tipocomp LIKE '%Factura%'",
                          (c["cuit"],)).fetchone()
         if lib["n"]:

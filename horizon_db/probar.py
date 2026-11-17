@@ -51,7 +51,12 @@ def armar_export(raiz):
         {"comprobante": "A-00005-00000001", "fecha": "2026-10-20", "tipo": "F", "cod": "X",
          "producto": "ONT Prueba X", "cantidad": 50},
         {"comprobante": "A-00005-00000004", "fecha": "2026-10-30", "tipo": "F", "cod": "X",  # corte de líneas
-         "producto": "ONT Prueba X", "cantidad": 10}]})
+         "producto": "ONT Prueba X", "cantidad": 10},
+        {"comprobante": "A-00005-00000003", "fecha": "2026-10-26", "tipo": "NC", "cod": "X",
+         "producto": "ONT Prueba X", "cantidad": -5}]})
+    escribir(f"{raiz}/facturacion/30222222222.json", {"cliente": "BETA", "cuit": "30222222222", "lineas": [
+        {"comprobante": "A-00005-00000002", "fecha": "2022-01-01", "tipo": "F", "cod": "Y",  # sabotaje: mismo número, otra cuenta
+         "producto": "Viejo", "cantidad": 1}]})
     fmt = {"f": ["fecha", "tipocomp", "moneda", "cliente", "cuit", "cuitPorNombre", "comprobante",
                  "bruto", "otros", "total", "tc", "detalle", "fechaAlta", "usuario", "_fila"]}
     dic = {"tipocomp": ["Factura de Venta Electrónica", "Nota de Crédito de Ventas Electrónica"],
@@ -99,6 +104,8 @@ def main():
         t = C.ficha_cliente(cx, "30-11111111-1")
         chequear("ficha por CUIT con guiones", t.startswith("Alfa Fibra (a-alfa)"), t)
         chequear("ficha: cotización, compra e historial", "NM90" in t and "50 × ONT Prueba X" in t and "pidió 100 ONT" in t, t)
+        chequear("sabotaje: la NC se muestra como nota de crédito, no como compra",
+                 "NOTA DE CRÉDITO (resta) A-00005-00000003 · 5 × ONT Prueba X" in t, t)
         chequear("ficha por nombre ambiguo pide elegir", C.ficha_cliente(cx, "Beta").startswith("Ambiguo"))
         chequear("ficha inexistente lo dice", C.ficha_cliente(cx, "Zeta").startswith("Sin coincidencias"))
         chequear("ficha de cuenta fuera lo avisa", "CUENTA FUERA" in C.ficha_cliente(cx, "f-fuera"))
@@ -107,7 +114,7 @@ def main():
         chequear("producto: stock con fecha de foto y último precio", "stock 500" in t and "2026-11-06" in t and "USD 38" in t, t)
 
         t = C.facturas_sin_cargar(cx, 60, HOY)
-        chequear("sabotaje: factura sin líneas detectada", "A-00005-00000002" in t and "FALTA CARGAR" in t, t)
+        chequear("sabotaje: factura sin líneas detectada aunque otra cuenta tenga el mismo número", "A-00005-00000002" in t and "FALTA CARGAR" in t, t)
         chequear("la NC no cuenta como factura sin líneas", "A-00005-00000003" not in t, t)
         chequear("la factura con líneas no aparece", "A-00005-00000001" not in t, t)
 
